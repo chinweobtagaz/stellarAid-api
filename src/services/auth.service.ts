@@ -112,7 +112,11 @@ export async function loginUser(
 ): Promise<{ user: PublicUser; tokens: TokenPair }> {
   const email = input.email.toLowerCase();
   const user = await prisma.user.findUnique({ where: { email } });
-  if (user === null || !(await comparePassword(input.password, user.passwordHash))) {
+  if (
+    user === null ||
+    user.deletedAt !== null ||
+    !(await comparePassword(input.password, user.passwordHash))
+  ) {
     throw new AppError('UNAUTHORIZED', 'Invalid email or password');
   }
   const tokens = await issueTokenPair({ id: user.id, role: user.role });
@@ -125,7 +129,7 @@ export async function refreshSession(rawToken: string): Promise<{
 }> {
   const { refreshTokenId, sub } = await verifyRefreshToken(rawToken);
   const user = await prisma.user.findUnique({ where: { id: sub } });
-  if (user === null) {
+  if (user === null || user.deletedAt !== null) {
     throw new AppError('UNAUTHORIZED', 'Invalid or expired refresh token');
   }
   await revokeRefreshToken(refreshTokenId);

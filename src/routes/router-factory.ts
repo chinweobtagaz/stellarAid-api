@@ -7,17 +7,18 @@
  */
 
 import { Router, type RequestHandler, type Router as ExpressRouter } from 'express';
-import { authLimiter } from '@/middlewares';
+import { authenticate, authLimiter, requireRole } from '@/middlewares';
 
-const FEATURE_MIDDLEWARE: Record<string, RequestHandler | undefined> = {
-  auth: authLimiter,
+const FEATURE_MIDDLEWARE: Record<string, readonly RequestHandler[] | undefined> = {
+  auth: [authLimiter],
+  admin: [authenticate, requireRole('ADMIN')],
 };
 
 export function createFeatureRouter(feature: string): ExpressRouter {
   const router = Router({ mergeParams: true });
   const middleware = FEATURE_MIDDLEWARE[feature];
   if (middleware !== undefined) {
-    router.use(middleware);
+    router.use(...middleware);
   }
   return router;
 }
